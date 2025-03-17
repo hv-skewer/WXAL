@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="机器人配置管理界面，支持API密钥、模型参数等设置">
+<meta name="keywords" content="机器人设置, AI配置, 模型参数">
+<link rel="icon" href="/static/seticon.ico">
+<title>机器人设置界面</title>
+<style>
+:root {
+--primary-color: #5d94ce;
+--bg-color: #f8f9fa;
+--card-bg: #ffffff;
+--border-radius: 8px;
+--box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+body {
+font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont,
+'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+margin: 20px;
+background-color: #3596ff;
+line-height: 1.6;
+}
+
+.settings-container {
+max-width: 800px;
+margin: 0 auto;
+padding: 20px;
+background: var(--card-bg);
+border-radius: var(--border-radius);
+box-shadow: var(--box-shadow);
+}
+
+.param-display {
+margin-top: 8px;
+font-family: monospace;
+color: #333;
+display: flex;
+align-items: center;
+gap: 10px;
+flex-wrap: wrap;
+}
+
+.param-unit {
+color: #999;
+font-size: 0.9em;
+}
+
+.form-group {
+margin-bottom: 20px;
+}
+
+label {
+display: block;
+margin-bottom: 8px;
+font-weight: 500;
+color: #333;
+}
+
+input[type="text"],
+input[type="number"] {
+width: 100%;
+padding: 12px;
+border: 2px solid #e0e0e0;
+border-radius: var(--border-radius);
+transition: border-color 0.3s ease;
+}
+
+input:focus {
+border-color: var(--primary-color);
+outline: none;
+}
+
+.slider {
+appearance: none;
+-webkit-appearance: none;
+width: 100%;
+height: 8px;
+background: #e0e0e0;
+border-radius: 4px;
+transition: background 0.3s ease;
+}
+
+.slider:hover {
+background: #d0d0d0;
+}
+
+.slider::-webkit-slider-thumb {
+-webkit-appearance: none;
+width: 24px;
+height: 24px;
+background: var(--primary-color);
+border-radius: 50%;
+cursor: pointer;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+width: 24px;
+height: 24px;
+background: var(--primary-color);
+border: none;
+border-radius: 50%;
+cursor: pointer;
+}
+
+button {
+padding: 12px 30px;
+background: var(--primary-color);
+color: white;
+border: none;
+border-radius: var(--border-radius);
+cursor: pointer;
+transition: all 0.3s ease;
+font-size: 16px;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:hover {
+background: #0056b3;
+transform: translateY(-1px);
+}
+
+button:active {
+transform: translateY(0);
+}
+
+.output-display {
+margin-top: 8px;
+font-family: monospace;
+color: #666;
+}
+
+@media (max-width: 600px) {
+body {
+margin: 10px;
+}
+
+.settings-container {
+padding: 15px;
+}
+
+button {
+width: 100%;
+padding: 14px;
+}
+}
+</style>
+</head>
+
+<body>
+    <div class="settings-container">
+        <h1 style="color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px;">
+            机器人设置
+        </h1>
+
+        <form id="robot-settings-form">
+            <!-- 平台API -->
+            <div class="form-group">
+                <label for="platform-api">平台API:</label>
+                <input type="text" id="platform-api" name="platform-api" value="{{ config.platform_api }}" required>
+            </div>
+
+            <!-- API Key -->
+            <div class="form-group">
+                <label for="api-key">API Key:</label>
+                <input type="text" id="api-key" name="api-key" value="{{ config.api_key }}" required>
+            </div>
+
+            <!-- 模型名称 -->
+            <div class="form-group">
+                <label for="model-name">模型名称:</label>
+                <input type="text" id="model-name" name="model-name" value="{{ config.model_name }}" required>
+            </div>
+
+            <!-- 最大生成长度 -->
+            <div class="form-group">
+                <label for="max-length">最大生成长度 (1-10048):</label>
+                <input type="number" id="max-length" name="max-length" min="1" max="10048"
+                    value="{{ config.max_length }}" required
+                    oninput="this.value = Math.max(1, Math.min(10048, this.value))">
+            </div>
+
+            <!-- 温度参数 -->
+            <div class="form-group">
+                <label for="temperature">温度参数 (0-2):</label>
+                <input type="range" id="temperature" name="temperature" class="slider" min="0" max="2" step="0.1"
+                    value="{{ config.temperature }}" oninput="updateTempDisplay(this.value)">
+                <div class="param-display">
+                    <span id="temp-value">{{ "%.1f" % config.temperature }}</span>
+                    <span class="param-unit">（0-2）</span>
+                </div>
+            </div>
+
+            <!-- 最大Token数 -->
+            <div class="form-group">
+                <label for="max-tokens">最大Token数 (1-10024):</label>
+                <input type="range" id="max-tokens" name="max-tokens" class="slider" min="1" max="10024"
+                    value="{{ config.max_tokens }}" oninput="this.nextElementSibling.value = this.value">
+                <output class="output-display">{{ config.max_tokens }}</output>
+            </div>
+
+            <!-- 用户和群聊输入 -->
+            <div class="form-group">
+                <label for="user-input">用户:</label>
+                <input type="text" id="user-input" name="user-input">
+            </div>
+
+            <div class="form-group">
+                <label for="group-input">群聊:</label>
+                <input type="text" id="group-input" name="group-input">
+            </div>
+
+            <!-- 添加按钮 -->
+            <div class="form-group" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="add-user-btn">添加用户</button>
+                <button type="button" id="add-group-btn" style="margin-left: 10px;">添加群聊</button>
+            </div>
+
+            <!-- 已添加项展示 -->
+            <div id="added-items" class="form-group"
+                style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                <!-- 通过JavaScript动态填充 -->
+            </div>
+
+            <!-- 预提示词 -->
+            <div class="form-group">
+                <label for="pre-prompt">预提示词:</label>
+                <input type="text" id="pre-prompt" name="pre-prompt" value="{{ config.pre_prompt }}">
+            </div>
+
+            <!-- 提交按钮 -->
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <button type="submit">保存设置</button>
+                <button type="reset">重置</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // 初始化已保存数据
+        document.addEventListener('DOMContentLoaded', function () {
+            const users = {{ config.users | tojson
+        }};
+        const groups = {{ config.groups | tojson }};
+        const container = document.getElementById('added-items');
+
+        // 初始化用户列表
+        users.forEach(user => {
+            const item = document.createElement('div');
+            item.textContent = `用户: ${user}`;
+            item.style.padding = '5px 10px';
+            item.style.background = '#e0e0e0';
+            item.style.borderRadius = '4px';
+            container.appendChild(item);
+        });
+
+        // 初始化群聊列表
+        groups.forEach(group => {
+            const item = document.createElement('div');
+            item.textContent = `群聊: ${group}`;
+            item.style.padding = '5px 10px';
+            item.style.background = '#d0e0f0';
+            item.style.borderRadius = '4px';
+            container.appendChild(item);
+        });
+
+        // 初始化温度显示
+        updateTempDisplay(document.getElementById('temperature').value);
+        });
+
+        // 动态添加用户
+        document.getElementById('add-user-btn').addEventListener('click', function () {
+            const input = document.getElementById('user-input');
+            const value = input.value.trim();
+            const container = document.getElementById('added-items');
+
+            if (!value) {
+                alert('用户输入框不能为空！');
+                return;
+            }
+
+            // 检查重复
+            const existingUsers = Array.from(document.querySelectorAll('#added-items div'))
+                .filter(el => el.textContent.startsWith('用户: '))
+                .map(el => el.textContent.replace('用户: ', ''));
+
+            if (existingUsers.includes(value)) {
+                alert('该用户已存在！');
+                return;
+            }
+
+            // 创建元素
+            const item = document.createElement('div');
+            item.textContent = `用户: ${value}`;
+            item.style.padding = '5px 10px';
+            item.style.background = '#e0e0e0';
+            item.style.borderRadius = '4px';
+            container.appendChild(item);
+            input.value = '';
+        });
+
+        // 动态添加群聊（逻辑类似用户）
+        document.getElementById('add-group-btn').addEventListener('click', function () {
+            const input = document.getElementById('group-input');
+            const value = input.value.trim();
+            const container = document.getElementById('added-items');
+
+            if (!value) {
+                alert('群聊输入框不能为空！');
+                return;
+            }
+
+            // 检查重复
+            const existingGroups = Array.from(document.querySelectorAll('#added-items div'))
+                .filter(el => el.textContent.startsWith('群聊: '))
+                .map(el => el.textContent.replace('群聊: ', ''));
+
+            if (existingGroups.includes(value)) {
+                alert('该群聊已存在！');
+                return;
+            }
+
+            // 创建元素
+            const item = document.createElement('div');
+            item.textContent = `群聊: ${value}`;
+            item.style.padding = '5px 10px';
+            item.style.background = '#d0e0f0';
+            item.style.borderRadius = '4px';
+            container.appendChild(item);
+            input.value = '';
+        });
+
+        // 表单提交处理
+        document.getElementById('robot-settings-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // 收集动态数据
+            const users = Array.from(document.querySelectorAll('#added-items div'))
+                .filter(el => el.textContent.startsWith('用户: '))
+                .map(el => el.textContent.replace('用户: ', ''));
+
+            const groups = Array.from(document.querySelectorAll('#added-items div'))
+                .filter(el => el.textContent.startsWith('群聊: '))
+                .map(el => el.textContent.replace('群聊: ', ''));
+
+            // 创建FormData
+            const formData = new FormData(this);
+            users.forEach(user => formData.append('users[]', user));
+            groups.forEach(group => formData.append('groups[]', group));
+
+            // 发送请求
+            fetch('/save-config', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                });
+        });
+
+        // 温度显示更新函数
+        function updateTempDisplay(value) {
+            document.getElementById('temp-value').textContent = parseFloat(value).toFixed(1);
+        }
+    </script>
+</body>
+
+</html>
