@@ -61,6 +61,8 @@ def save_config():
 
 # 检测配置文件是否存在
 def ifconfig():
+    if not os.path.exists('../config'):
+        os.makedirs("../config")
     if os.access(CONFIG_FILE, os.F_OK):
         borstr = input("检测到配置文件已存在,是否重新设置？(Y/N): ")
         if borstr == 'Y' or borstr == 'y':
